@@ -1,0 +1,4 @@
+.sandbox/
+config.json
+__pycache__/
+.idea/
