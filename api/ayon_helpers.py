@@ -1,8 +1,13 @@
 import json
 import ayon_api
+from ayon_api.server_api import RequestTypes
 import os
 import io
-from PySide2 import QtGui
+
+try:
+    from PySide2 import QtGui
+except ImportError:
+    from PySide6 import QtGui
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 
@@ -65,9 +70,39 @@ class AyonHelper:
         return task.get('taskType', '')
 
     @staticmethod
-    def create_comment(project, entity_id, entity_type, cmt_type, body):
+    def create_comment(project, entity_id, entity_type, cmt_type, body, files):
         con.create_activity(project_name=project,
                             entity_id=entity_id,
                             entity_type=entity_type,
                             activity_type=cmt_type,
-                            body=body)
+                            body=body,
+                            file_ids=files)
+
+    @staticmethod
+    def upload_file(file_path, project):
+        response = con.upload_file(
+            f"projects/{project}/files",
+            filepath=file_path,
+            request_type=RequestTypes.post,
+            headers={
+                "x-file-name": os.path.basename(file_path),
+                "content-type": "image/png",  # or mimetypes.guess_type(thumb_path)[0]
+            },
+        )
+        data = response.json()
+        return data['id']
+
+    @staticmethod
+    def update_activity_file_ids(project, activity_id, file_ids):
+        existing_files = con.get_activity_by_id(
+            project_name=project,
+            activity_id=activity_id,
+            fields=["files.id"]
+        )
+        _file_ids = [x['id'] for x in existing_files['files']]
+        _file_ids.extend(file_ids)
+        con.update_activity(
+            project_name="SRV_TST",
+            activity_id="ed7faf3074a511f1bcf30f80bec121a0",
+            file_ids=_file_ids
+        )

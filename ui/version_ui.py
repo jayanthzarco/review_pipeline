@@ -1,3 +1,5 @@
+import os
+
 try:
     from PySide2 import QtWidgets, QtCore, QtGui
 except ImportError:
@@ -11,6 +13,9 @@ from review_pipeline.ui.custom_feed import (
 import json
 from review_pipeline.api import custom_api, nuke_studio, ayon_helpers
 import importlib
+import tempfile
+from pathlib import Path
+import shutil
 
 importlib.reload(custom_api)
 importlib.reload(nuke_studio)
@@ -178,12 +183,36 @@ class ActivityTab(QtWidgets.QWidget):
 
     @staticmethod
     def submit_annotation(version_data: dict, text: str):
-        # TODO : need to find a way to export nuke studio annotations
+        temp_dir = os.path.join(tempfile.gettempdir(), "xdrfg")
+        nuke_studio.export_clips_with_annotations(
+            export_path=temp_dir
+        )
+        temp_root = Path(temp_dir)
+        annotation_folders = [
+            folder for folder in temp_root.rglob("annotations")
+            if folder.is_dir()
+        ]
+        print("annotation folders :", annotation_folders)
+        file_ids = []
+        for each in os.listdir(annotation_folders[0]):
+            _annotation_image = os.path.join(annotation_folders[0], each)
+            if _annotation_image.endswith(".png"):
+                file_id = ayon_helpers.AyonHelper.upload_file(
+                    file_path=_annotation_image,
+                    project=version_data.get("project")
+                )
+                file_ids.append(file_id)
+
+        # TODO : need to find a way to export nuke studio annotations (done) # still its slow need to do faster
         ayon_helpers.AyonHelper.create_comment(project=version_data.get('project'),
                                                entity_id=version_data.get('versionId'),
                                                entity_type='version',
                                                cmt_type='comment',
-                                               body=text)
+                                               body=text,
+                                               files=file_ids)
+        print("cleaning up .")
+        if temp_root.exists() and temp_root.is_dir():
+            shutil.rmtree(temp_root)
 
     def _on_submit(self):
         text = self.annotation_input.toPlainText().strip()

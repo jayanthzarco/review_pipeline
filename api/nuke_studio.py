@@ -1,5 +1,6 @@
 import hiero.core
 import hiero.ui
+import hiero.exporters
 import os
 import re
 
@@ -227,3 +228,62 @@ def load_sequence_dailies(clip_paths_list, trackName, seqName):
 
     hiero.ui.openInViewer(my_sequence)
     # print(f"[load_sequence_dailies] loaded {len(valid_paths)} clips onto single track")
+
+
+def export_clips_with_annotations(
+        export_path="D:/annotations/v001",
+        preset_name="Basic Nuke Shot With Annotations",
+        submission_name="Single Render Process"
+):
+    """
+    Automates: Right-click > Export > Custom Export >
+               Process as Shots > Basic Nuke Shot With Annotations
+    - Strips TranscodeExporter task (jpeg) to avoid frame number errors
+    - Restores preset after export so UI is unchanged
+    """
+    project = hiero.core.projects()[-1]
+
+    # Collect all shots
+    track_items = []
+    for seq in project.sequences():
+        for track in seq.videoTracks():
+            for item in track.items():
+                track_items.append(hiero.core.ItemWrapper(item))
+
+    if not track_items:
+        print("No shots found.")
+        return
+
+    print(f"Found {len(track_items)} shots to export.")
+
+    # Find preset
+    registry = hiero.core.taskRegistry
+    preset = None
+    for p in registry.localPresets():
+        if p.name() == preset_name:
+            preset = p
+            break
+
+    if not preset:
+        print(f"Preset '{preset_name}' not found.")
+        return
+
+    print(f"Using preset: {preset.name()}")
+
+    # Strip TranscodeExporter, keep only NukeAnnotations task
+    original_template = preset.properties().get("exportTemplate", [])
+    preset.properties()["exportTemplate"] = [
+        task for task in original_template
+        if "TranscodeExporter" not in str(task[1])
+    ]
+    preset.properties()["exportRoot"] = export_path
+
+    try:
+        registry.createAndExecuteProcessor(preset, track_items, submission_name, synchronous=True)
+        print(f" Export COMPLETE → {export_path}")
+    except Exception as e:
+        print(f" Export failed: {e}")
+    finally:
+        # Always restore preset even if export fails
+        preset.properties()["exportTemplate"] = original_template
+        print("Preset restored.")
