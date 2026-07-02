@@ -673,3 +673,47 @@ class CheckableComboBox(QtWidgets.QComboBox):
                 if item and item.checkState() == QtCore.Qt.Checked:
                     checked.append(item.text())
         return checked
+
+
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QPainter, QPen, QColor
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout
+
+
+class CircularProgress(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.value = 0
+        self.setFixedSize(100, 100)
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.updateProgress)
+        self.timer.start(30)  # speed
+
+    def updateProgress(self):
+        self.value += 2
+        if self.value > 100:
+            self.value = 0
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        margin = 6
+        rect = self.rect().adjusted(margin, margin, -margin, -margin)
+
+        # Background circle
+        bg_pen = QPen(QColor("white"), 1)
+        painter.setPen(bg_pen)
+        painter.drawEllipse(rect)
+
+        # Progress arc
+        pen = QPen(Qt.gray, 4)
+        pen.setCapStyle(Qt.RoundCap)
+        painter.setPen(pen)
+
+        span = int(360 * self.value / 100)
+        painter.drawArc(rect, 90 * 16, -span * 16)
+
