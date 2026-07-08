@@ -1,0 +1,8 @@
+{
+  "AYON_SERVER_URL": "https://your-ayon-server.example.com",
+  "AYON_API_KEY": "your-ayon-api-key",
+  "SG_URL": "https://your-shotgrid.shotgunstudio.com",
+  "SG_SCRIPT_NAME": "your-script-name",
+  "SG_SCRIPT_KEY": "your-script-key",
+  "SG_PROXY": ""
+}
